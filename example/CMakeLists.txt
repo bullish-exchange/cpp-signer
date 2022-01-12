@@ -1,0 +1,2 @@
+add_executable(ecc_signing ecc_signing.cpp)
+target_link_libraries(ecc_signing PRIVATE eosio_r1_key)
