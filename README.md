@@ -72,13 +72,14 @@ CentOS Linux release 7.9.2009 (Core)
 ### Install openssl
 The system default OpenSSL package won't work. Please install latest OpenSSL 1.1 from source and install it to `/usr/local`. 
 
-when buiding openssl 1.1
+As of this writing, OpenSSL version 1.1.1n is current and has no vulnerabilities. Please check the OpenSSL [**vulnerabilities page**](https://www.openssl.org/news/vulnerabilities.html) for the latest, safest 1.1 version and substitute that in below when building.
+
 ```
-wget https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz
+wget https://ftp.openssl.org/source/openssl-1.1.1n.tar.gz
 
-tar -xzvf openssl-1.1.1k.tar.gz
+tar -xzvf openssl-1.1.1n.tar.gz
 
-cd openssl-1.1.1k
+cd openssl-1.1.1n
 
 ./config --prefix=/usr/local --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic
 
