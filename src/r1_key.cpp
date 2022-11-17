@@ -1,6 +1,7 @@
 #include <eosio/check.hpp>
 #include <eosio/crypto.hpp>
 #include <eosio/fixed_bytes.hpp>
+#include <eosio/from_json.hpp>
 #include <eosio/r1_key.hpp>
 #include <memory>
 
@@ -320,6 +321,19 @@ private_key::sign_compact(const eosio::checksum256 &digest) const {
 std::string private_key::sign(std::string_view input) const {
   return eosio::signature_to_string(eosio::signature{
       std::in_place_index<1>, sign_compact(sha256::hash(input))});
+}
+
+std::string private_key::sign_digest(std::string_view digest) const {
+  check(digest.size() == 64, convert_json_error(eosio::from_json_error::expected_hex_string));
+
+  eosio::checksum256 checksum;
+  if (!eosio::unhex(reinterpret_cast<uint8_t *>(checksum.data()), digest.begin(), digest.end())) {
+    check(false, convert_json_error(eosio::from_json_error::expected_hex_string));
+    __builtin_unreachable();
+  };
+
+  return eosio::signature_to_string(eosio::signature{
+      std::in_place_index<1>, sign_compact(checksum)});
 }
 
 private_key private_key::generate() {

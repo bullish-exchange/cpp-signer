@@ -114,12 +114,25 @@ ctest
 ```
 
 
-### Run the example app
+### Example program that signs the request digest with the C++ library, and places the order
 
 ```
-cd build/example
+cmake -DEOSIO_R1_KEY_ENABLE_TEST=ON -DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON -DCMAKE_BUILD_TYPE=Release -S. -Bbuild -DOPENSSL_ROOT_DIR=/usr/local && cmake --build build
 
-ecc_signing
+# follow https://api.exchange.bullish.com/docs/api/rest/#overview--get-your-bullish-account-id to prepare the environment variables
+export BX_API_HOSTNAME=...
+export BX_PUBLIC_KEY=...
+export BX_PRIVATE_KEY=...
+export BX_API_METADATA=...
+export BX_AUTHORIZER=...
+export BX_JWT=...
+
+# call the python tool which calls ./build/example/ecc_signing to sign
+./build/example/create_order.py
+
+# expected output like, confirming the order has been placed
+{"message":"Command acknowledged - CreateOrder","requestId":"511042106937573376","orderId":"511042106937573377","test":false}
+
 ```
 
 ## License
