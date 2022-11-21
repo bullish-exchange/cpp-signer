@@ -72,6 +72,7 @@ public:
 
   ecc_signature sign_compact(const eosio::checksum256 &digest) const;
   std::string sign(std::string_view input) const;
+  std::string sign_digest(std::string_view digest) const;
 
   static private_key generate();
   ecc_private_key serialize() const;
