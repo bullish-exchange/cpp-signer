@@ -1,14 +1,22 @@
-# eosio-signing-example
+# C++ library and examples for signing messages or digests using R1 keys
 
 This repo provides the library and minimal C++ code example to sign any arbitrary message with an EOSIO R1 key and produce an EOSIO signature (k1 keys are not yet supported).
 
-to compile:
+Make sure the submodules are pulled before compiling it.
+
+```
+git submodule update --init --recursive
+```
+
+To build the project:
+
 ```
 cmake -DCMAKE_BUILD_TYPE=Release -S. -Bbuild && cmake --build build
 ```
 
-
 ## How to - integration into your own project
+
+Add this repo as a submodule, such as in `cpp-signer`.
 
 In your CMakeLists.txt 
 
@@ -23,13 +31,7 @@ project(
 
 set(CMAKE_CXX_STANDARD 17)
 
-### TODO: change to following GIT_TAG value to the appropriate commit hash
-FetchContent_Declare(
-  eosio_r1_key
-  GIT_REPOSITORY https://github.com/b1-as/eosio-signing-example
-  GIT_TAG e579075b714a1a3bd40436dcb29c575ddd83859b
-)
-FetchContent_MakeAvailable(eosio_r1_key)
+add_subdirectory(cpp-signer)
 
 add_executable(mysrc mysrc.cpp)
 target_link_libraries(mysrc PRIVATE eosio_r1_key)
@@ -44,19 +46,19 @@ In your C++ source code `mysrc.cpp`
 int main() {
   OPENSSL_init_crypto(OPENSSL_INIT_LOAD_CONFIG, NULL);
   const char* test_json = R"x({"accountId":"abc","nonce":1,"expirationTime":1636755051,"biometricsUsed":false,"sessionKey":null})x";
-  
+
   // The private key in this example is coded into the source. In production settings please store the private key in an environment variable and retrieve it here
   eosio::r1::private_key priv_key{"PVT_R1_iyQmnyPEGvFd8uffnk152WC2WryBjgTrg22fXQryuGL9mU6qW"};
-  
+
   std::cout << priv_key.sign(test_json)<< "\n";
-  
+
   return 0;
 }
 ```
 
-## For CentOS 7 
+## For CentOS 7
 
-Requires C++17 support. We have tested with g++ 10.2.1 
+Requires C++17 support. We have tested with g++ 10.2.1
 ```
 # g++ --version
 g++ (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11)
@@ -70,15 +72,16 @@ CentOS Linux release 7.9.2009 (Core)
 
 
 ### Install openssl
-The system default OpenSSL package won't work. Please install latest OpenSSL 1.1 from source and install it to `/usr/local`. 
+The system default OpenSSL package won't work. Please install latest OpenSSL 1.1 from source and install it to `/usr/local`.
 
-when buiding openssl 1.1
+As of this writing, OpenSSL version 1.1.1q is current and has no vulnerabilities. Please check the OpenSSL [**vulnerabilities page**](https://www.openssl.org/news/vulnerabilities.html) for the latest, safest 1.1 version and substitute that in below when building.
+
 ```
-wget https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz
+wget https://ftp.openssl.org/source/openssl-1.1.1q.tar.gz
 
-tar -xzvf openssl-1.1.1k.tar.gz
+tar -xzvf openssl-1.1.1q.tar.gz
 
-cd openssl-1.1.1k
+cd openssl-1.1.1q
 
 ./config --prefix=/usr/local --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic
 
