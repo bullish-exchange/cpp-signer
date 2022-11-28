@@ -13,9 +13,9 @@ RUN dnf install -y cmake && \
     dnf install -y zlib-devel
 
 RUN source scl_source enable gcc-toolset-10 && \
-    wget https://ftp.openssl.org/source/openssl-1.1.1k.tar.gz && \
-    tar -xzvf openssl-1.1.1k.tar.gz && \
-    cd openssl-1.1.1k && \
+    wget https://ftp.openssl.org/source/openssl-1.1.1q.tar.gz && \
+    tar -xzvf openssl-1.1.1q.tar.gz && \
+    cd openssl-1.1.1q && \
     ./config --prefix=/usr/local --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && \
     make && \
     make install && \
