@@ -1,3 +1,9 @@
 [submodule "libraries/abieos"]
 	path = libraries/abieos
 	url = https://github.com/EOSIO/abieos
+[submodule "example/include/httplib"]
+	path = example/include/httplib
+	url = https://github.com/yhirose/cpp-httplib
+[submodule "example/include/rapidjson"]
+	path = example/include/rapidjson
+	url = https://github.com/Tencent/rapidjson
