@@ -22,9 +22,11 @@ int main(int argc, char *argv[]) {
 
   if (payload[0] == '{') {
     // input is the payload message
+    std::cerr << "Signing with payload: " << payload << std::endl;
     std::cout << priv_key.sign(payload) << "\n";
   } else {
     // input is the hex string of the payload message's sha256 checksum
+    std::cerr << "Signing with digest: " << payload << std::endl;
     std::cout << priv_key.sign_digest(payload) << "\n";
   }
 

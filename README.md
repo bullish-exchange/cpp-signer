@@ -11,14 +11,12 @@ git submodule update --init --recursive
 To build the project:
 
 ```
-cmake -DCMAKE_BUILD_TYPE=Release -S. -Bbuild && cmake --build build
+cmake -DEOSIO_R1_KEY_ENABLE_TEST=ON -DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON -DCMAKE_BUILD_TYPE=Release -S. -Bbuild -DOPENSSL_ROOT_DIR=/usr/local && cmake --build build
 ```
 
 ## How to - integration into your own project
 
-Add this repo as a submodule, such as in `cpp-signer`.
-
-In your CMakeLists.txt 
+In your CMakeLists.txt
 
 ```
 include(FetchContent)
@@ -138,9 +136,70 @@ export BX_JWT=...
 
 ```
 
+# C++ Example for Withdraw API Calls
+
+This repo provides an example C++ program using the cpp-signer library to sign requests to perform withdraw Custody API calls.
+
+Note: the withdrawal request body contains a hash ID. For different testing accounts, please use the corresponding hash IDs for the destinations.   
+
+To run the build program:
+
+```
+# Set the environments accordingly, following https://github.com/bullish-exchange/api-examples
+
+export BX_API_HOSTNAME=...
+export BX_PRIVATE_KEY=...
+export BX_API_METADATA=...
+```
+
+Run the `withdraw` program to place the withdraw request:
+
+```
+./build/example/withdraw
+```
+
+One example output:
+
+```
+=== STEP 0. Load Environment Variables =============================================================
+
+% Loaded BX_API_HOSTNAME: https://api.simnext.bullish-test.com
+% Loaded BX_PRIVATE_KEY: *********************************************************
+% Loaded BX_API_METADATA: eyJhY2NvdW50SWQiOiIyMjIwMDAwMDAwMDAwMDUiLCJwdWJsaWNLZXkiOiJQVUJfUjFfN2M1V1ljUTZhU1hGVHdUVXRNY0VYRmpadGJqYkR1bUNlTnI3b1lEU0JGN3h1cXBEVjMiLCJjcmVkZW50aWFsSWQiOiIyMDI4OCJ9
+{"accountId":"222000000000005","publicKey":"PUB_R1_7c5WYcQ6aSXFTwTUtMcEXFjZtbjbDumCeNr7oYDSBF7xuqpDV3","credentialId":"20288"}
+% Loaded from BX_API_METADATA accountId: 222000000000005
+% Loaded from BX_API_METADATA publicKey: PUB_R1_7c5WYcQ6aSXFTwTUtMcEXFjZtbjbDumCeNr7oYDSBF7xuqpDV3
+% Loaded from BX_API_METADATA credentialId: 20288
+
+=== STEP 1. Login ==================================================================================
+
+% signature: SIG_R1_K1kzQoXg7HJ84fXZFwogNQ3bsrDrerZDM7wV3vsLtEWJAZ2UNxReM9tyZ7MKEG64cevdCbD26C3oqJVLV9ACKM3HMTh2pq
+% Sending HTTP request to: https://api.simnext.bullish-test.com/trading-api/v1/users/login
+% Sending HTTP request with body: {"publicKey":"PUB_R1_7c5WYcQ6aSXFTwTUtMcEXFjZtbjbDumCeNr7oYDSBF7xuqpDV3","signature":"SIG_R1_K1kzQoXg7HJ84fXZFwogNQ3bsrDrerZDM7wV3vsLtEWJAZ2UNxReM9tyZ7MKEG64cevdCbD26C3oqJVLV9ACKM3HMTh2pq","loginPayload":{"accountId":"222000000000005","nonce":1669880212,"expirationTime":1669880512,"biometricsUsed":false,"sessionKey":null}}
+% Received HTTP response status code: 200
+% Received HTTP response body: {"authorizer":"05E02367E8C90000404F000000000000","ownerAuthorizer":"05E02367E8C90000404F000000000000","token":"eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJiMXgtYXV0aC1zZXJ2aWNlIiwic3ViIjoiMjI0MDUyMCIsImV4cCI6MTY2OTk2NjYxMiwiU1RBR0UiOiJBVVRIRU5USUNBVEVEX1dJVEhfQkxPQ0tDSEFJTiJ9._oFi1NpjCUkrPSYj9AcZQ6RLs4P8Bjr5CComLEh4hptThP46CW-Mf8H_LdrU_Ws0DNJ4lXUfOV12R_LDt2TuzQ","rateLimitToken":"518f8eaa9cfe932ede458499b25612b56828c171c1b864dca4fa3706185d2a77"}
+% Token: eyJhbGciOiJFUzI1NiJ9.eyJpc3MiOiJiMXgtYXV0aC1zZXJ2aWNlIiwic3ViIjoiMjI0MDUyMCIsImV4cCI6MTY2OTk2NjYxMiwiU1RBR0UiOiJBVVRIRU5USUNBVEVEX1dJVEhfQkxPQ0tDSEFJTiJ9._oFi1NpjCUkrPSYj9AcZQ6RLs4P8Bjr5CComLEh4hptThP46CW-Mf8H_LdrU_Ws0DNJ4lXUfOV12R_LDt2TuzQ
+
+=== STEP 2. Withdrawal Challenge ===================================================================
+
+% Sending HTTP request to: https://api.simnext.bullish-test.com/trading-api/v1/wallets/withdrawal-challenge
+% Sending HTTP request with body: {"nonce":"1669880212","command":{"commandType":"V1WithdrawalChallenge","destinationId":"bf6d41a97a1d56e289cdaf10f386a3bd5166d51f9edf50892874bf2e7c0ddaf4","network":"SWIFT","symbol":"USD","quantity":"1"}}
+% Received HTTP response status code: 200
+% Received HTTP response body: {"challenge":"755b8c0a147f2b3735d7c90869d5cf2d41025aa20b245671bcf3098e071e06a2","custodyTransactionId":"DB:FW_0c4c220c545ed1c0f54c918b2141c79f23ea866f64853c805b27b9f1fd61a6c2","statusReason":"Withdrawal challenge created","statusReasonCode":1001}
+% Challenge: 755b8c0a147f2b3735d7c90869d5cf2d41025aa20b245671bcf3098e071e06a2
+
+=== STEP 3. Withdrawal Assertion ===================================================================
+
+% Signature: SIG_R1_KBf2suQydKkfNBBR5jmtYjUo2KKXtp8kYuV1TPGrs31LnnwBT7CJtt7HPmdUDExRaAtBYYFiqacW7zvF3sffTPuti8r4wA
+% Sending HTTP request to https://api.simnext.bullish-test.com/trading-api/v1/wallets/withdrawal-assertion
+% Sending HTTP request with body: {"command":{"commandType":"V1WithdrawalAssertion","signature":"SIG_R1_KBf2suQydKkfNBBR5jmtYjUo2KKXtp8kYuV1TPGrs31LnnwBT7CJtt7HPmdUDExRaAtBYYFiqacW7zvF3sffTPuti8r4wA","challenge":"755b8c0a147f2b3735d7c90869d5cf2d41025aa20b245671bcf3098e071e06a2","publicKey":"PUB_R1_7c5WYcQ6aSXFTwTUtMcEXFjZtbjbDumCeNr7oYDSBF7xuqpDV3"}}
+% Received HTTP response status code: 200
+% Received HTTP response body: {"statusReason":"Withdrawal assertion accepted","statusReasonCode":1001,"custodyTransactionId":"DB:FW_0c4c220c545ed1c0f54c918b2141c79f23ea866f64853c805b27b9f1fd61a6c2"}
+```
+
 ## License
 
-EOSIO is released under the open source [MIT](./LICENSE) license and is offered “AS IS” without warranty of any kind, express or implied. Any security provided by the EOSIO software depends in part on how it is used, configured, and deployed. EOSIO is built upon many third-party libraries such as WABT (Apache License) and WAVM (BSD 3-clause) which are also provided “AS IS” without warranty of any kind. Without limiting the generality of the foregoing, Block.one makes no representation or guarantee that EOSIO or any third-party libraries will perform as intended or will be free of errors, bugs or faulty code. Both may fail in large or small ways that could completely or partially limit functionality or compromise computer systems. If you use or implement EOSIO, you do so at your own risk. In no event will Block.one be liable to any party for any damages whatsoever, even if it had been advised of the possibility of damage.  
+EOSIO is released under the open source [MIT](./LICENSE) license and is offered “AS IS” without warranty of any kind, express or implied. Any security provided by the EOSIO software depends in part on how it is used, configured, and deployed. EOSIO is built upon many third-party libraries such as WABT (Apache License) and WAVM (BSD 3-clause) which are also provided “AS IS” without warranty of any kind. Without limiting the generality of the foregoing, Block.one makes no representation or guarantee that EOSIO or any third-party libraries will perform as intended or will be free of errors, bugs or faulty code. Both may fail in large or small ways that could completely or partially limit functionality or compromise computer systems. If you use or implement EOSIO, you do so at your own risk. In no event will Block.one be liable to any party for any damages whatsoever, even if it had been advised of the possibility of damage.
 
 ## Important
 
