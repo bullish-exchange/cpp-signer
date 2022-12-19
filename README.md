@@ -136,11 +136,13 @@ export BX_JWT=...
 
 ```
 
-# C++ Example for Withdraw API Calls
+# C++ Examples
+
+## Call with Withdraw API
 
 This repo provides an example C++ program using the cpp-signer library to sign requests to perform withdraw Custody API calls.
 
-Note: the withdrawal request body contains a hash ID. For different testing accounts, please use the corresponding hash IDs for the destinations.   
+Note: the withdrawal request body contains a hash ID. For different testing accounts, please use the corresponding hash IDs for the destinations.
 
 To run the build program:
 
@@ -195,6 +197,56 @@ One example output:
 % Sending HTTP request with body: {"command":{"commandType":"V1WithdrawalAssertion","signature":"SIG_R1_KBf2suQydKkfNBBR5jmtYjUo2KKXtp8kYuV1TPGrs31LnnwBT7CJtt7HPmdUDExRaAtBYYFiqacW7zvF3sffTPuti8r4wA","challenge":"755b8c0a147f2b3735d7c90869d5cf2d41025aa20b245671bcf3098e071e06a2","publicKey":"PUB_R1_7c5WYcQ6aSXFTwTUtMcEXFjZtbjbDumCeNr7oYDSBF7xuqpDV3"}}
 % Received HTTP response status code: 200
 % Received HTTP response body: {"statusReason":"Withdrawal assertion accepted","statusReasonCode":1001,"custodyTransactionId":"DB:FW_0c4c220c545ed1c0f54c918b2141c79f23ea866f64853c805b27b9f1fd61a6c2"}
+```
+
+## Call with Orders API
+
+To run the build program:
+
+```
+# Set the environments accordingly, following https://github.com/bullish-exchange/api-examples
+
+export BX_API_HOSTNAME=...
+export BX_PRIVATE_KEY=...
+export BX_JWT=...
+export BX_AUTHORIZER=...
+```
+
+Run the `create_order` program to place the orders request:
+
+One example output:
+
+```
+=== STEP 0. Load Environment Variables =============================================================
+
+% Loaded BX_API_HOSTNAME: https://api.simnext.bullish-test.com
+% Loaded BX_PRIVATE_KEY: [--- HIDDEN ---]
+% Loaded BX_JWT: [--- HIDDEN ---]
+% Loaded BX_AUTHORIZER: C3FE2367E8C90000823E000000000000
+
+=== STEP 1. Get Nonce ==============================================================================
+
+% Sending HTTP request to: https://api.simnext.bullish-test.com/trading-api/v1/nonce
+% Received HTTP response status code: 200
+% Received HTTP response reason: OK
+% Received HTTP response body: {"lowerBound":1671408000000000,"upperBound":1671494399999000}
+% Nonce: 1671408000000001
+
+=== STEP 2. Create Order ===========================================================================
+
+% Signature: SIG_R1_JviKVowMYNVE3Z1c4q58a6c96VoqVEqfGLERZGSaajoB36X3Ln4ftFkWncqpKMsdhGPvXcDdtC1mG2qnSSp8Ztceid1TXV
+% Sending HTTP request to: https://api.simnext.bullish-test.com/trading-api/v1/orders
+% Sending HTTP request with headers:
+--- Headers -----
+Authorization: [--- HIDDEN ---]
+BX-NONCE: 1671408000000001
+BX-SIGNATURE: SIG_R1_JviKVowMYNVE3Z1c4q58a6c96VoqVEqfGLERZGSaajoB36X3Ln4ftFkWncqpKMsdhGPvXcDdtC1mG2qnSSp8Ztceid1TXV
+BX-TIMESTAMP: 1671416287000
+-----------------
+% Sending HTTP request with body: {"timestamp":"1671416287000","nonce":"1671408000000001","authorizer":"C3FE2367E8C90000823E000000000000","command":{"commandType":"V1CreateOrder","handle":null,"symbol":"BTCUSD","type":"LMT","side":"BUY","price":"30071.5000","stopPrice":null,"quantity":"1.87000000","timeInForce":"GTC","allowMargin":false}}
+% Received HTTP response status code: 200
+% Received HTTP response reason: OK
+% Received HTTP response body: {"message":"Command acknowledged - CreateOrder","requestId":"524772390270926848","orderId":"524772390270926849","test":false}```
 ```
 
 ## License
