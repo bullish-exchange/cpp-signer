@@ -91,7 +91,7 @@ int main() {
 
   Env env;
   if (!load_env(env)) {
-    std::cerr << "Please make sure the enviornment variables have been set:\n"
+    std::cerr << "Please make sure the environment variables have been set:\n"
                   "  - BX_API_HOSTNAME\n"
                   "  - BX_PRIVATE_KEY\n"
                   "  - BX_API_METADATA" << std::endl;;
