@@ -1,22 +1,19 @@
-#include <eosio/check.hpp>
-#include <eosio/crypto.hpp>
-#include <eosio/fixed_bytes.hpp>
-#include <eosio/from_json.hpp>
 #include <eosio/r1_key.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/check.hpp>
+
+#include <openssl/sha.h>
+
 #include <memory>
 
-std::string format_error_message(std::string_view msg, const char *file,
+std::string format_error_message(const std::string& msg, const char *file,
                                  int line) {
   return std::string(msg) + " " + file + ":" + std::to_string(line);
 }
 
-#define ASSERT(cond, msg)                                                      \
-  eosio::check(cond, format_error_message(msg, __FILE__, __LINE__))
+#define ASSERT(cond, msg)  if (!(cond)) { throw std::runtime_error(format_error_message(msg, __FILE__, __LINE__)); }
 
 namespace eosio {
-namespace sha256 {
-eosio::checksum256 hash(std::string_view str);
-}
 namespace r1 {
 
 EC_KEY *new_r1_key() {
@@ -31,8 +28,8 @@ std::unique_ptr<T, Deleter> make_unique_ptr(T *ptr, Deleter deleter) {
   return std::unique_ptr<T, Deleter>(ptr, deleter);
 }
 
-auto make_ssl_bignum() { return make_unique_ptr(BN_new(), BN_free); }
-auto dup_ssl_bignum(const BIGNUM *from) {
+auto make_ssl_bignum() -> decltype(make_unique_ptr(BN_new(), BN_free)) { return make_unique_ptr(BN_new(), BN_free); }
+auto dup_ssl_bignum(const BIGNUM *from) -> decltype(make_unique_ptr(BN_dup(from), BN_free)) {
   return make_unique_ptr(BN_dup(from), BN_free);
 }
 
@@ -176,9 +173,9 @@ err:
 }
 
 eosio::ecc_signature signature_from_ecdsa(const EC_KEY *key,
-                                          const ecc_public_key &pub_data,
+                                          const ecc_public_key& pub_data,
                                           ECDSA_SIG *sig,
-                                          const eosio::checksum256 &d,
+                                          const eosio::checksum256& d,
                                           int nBitsR, int nBitsS) {
 
   const BIGNUM *sig_r, *sig_s;
@@ -221,12 +218,32 @@ eosio::ecc_signature signature_from_ecdsa(const EC_KEY *key,
   return csig;
 }
 
-public_key::public_key(std::string_view str)
-    : public_key(std::get<1>(eosio::public_key_from_string(str))) {}
+void public_key::set(const ecc_public_key& data) {
+  const char *front = &data[0];
+  if (*front == 0) {
+    ASSERT(key, "invalid public key - the first char is not '\0'");
+  } else {
+    key = o2i_ECPublicKey(&key, (const unsigned char **)&front, data.size());
+    ASSERT(key, "invalid public key");
+  }
+}
 
-public_key::public_key(const eosio::ecc_signature &c,
-                       const eosio::checksum256 &digest)
-    : public_key() {
+public_key::public_key(const std::string& str)
+    : key(new_r1_key()) {
+  set(eosio::public_key_from_string(str));
+}
+
+public_key::public_key(const ecc_public_key& data) : key(new_r1_key()) {
+  set(data);
+}
+
+public_key::public_key(const public_key& other) : key(new_r1_key()) {
+  EC_KEY_copy(key, other.key);
+}
+
+public_key::public_key(const eosio::ecc_signature& c,
+                       const eosio::checksum256& digest)
+    :  key(new_r1_key()) {
   int nV = c[0];
   ASSERT(nV >= 27 && nV < 35, "invalid r1 signature");
 
@@ -256,35 +273,33 @@ public_key::public_key(const eosio::ecc_signature &c,
          "unable to reconstruct public key from signature");
 }
 
-public_key::public_key(const ecc_public_key &data) {
-  const char *front = &data[0];
-  if (*front == 0) {
-  } else {
-    key = new_r1_key();
-    key = o2i_ECPublicKey(&key, (const unsigned char **)&front, data.size());
-    ASSERT(key, "invalid public key");
-  }
-}
-
 ecc_public_key public_key::serialize() const {
   ecc_public_key dat;
-  if (!key)
-    return dat;
+  ASSERT(key, "empty public key");
   EC_KEY_set_conv_form(key, POINT_CONVERSION_COMPRESSED);
   char *front = dat.data();
   i2o_ECPublicKey(key, (unsigned char **)&front);
   return dat;
 }
 
-private_key::private_key(const ecc_private_key &data) : private_key() {
+void private_key::set(const ecc_private_key& data) {
   auto d = BN_bin2bn(reinterpret_cast<const uint8_t *>(data.data()),
                      data.size(), NULL);
 
   ASSERT(EC_KEY_set_private_key(key, d), "invalid private key");
 }
 
-private_key::private_key(std::string_view str)
-    : private_key(std::get<1>(eosio::private_key_from_string(str))) {}
+private_key::private_key(const private_key& other) : key(new_r1_key()) {
+  EC_KEY_copy(key, other.key);
+}
+
+private_key::private_key(const ecc_private_key& data) : key(new_r1_key()) {
+  set(data);
+}
+
+private_key::private_key(const std::string& str) : key(new_r1_key()) {
+  set(eosio::private_key_from_string(str));
+}
 
 public_key private_key::get_public_key() const {
   public_key pub;
@@ -300,7 +315,7 @@ public_key private_key::get_public_key() const {
 }
 
 eosio::ecc_signature
-private_key::sign_compact(const eosio::checksum256 &digest) const {
+private_key::sign_compact(const eosio::checksum256& digest) const {
   auto my_pub_key = get_public_key().serialize(); // just for good measure
 
   while (true) {
@@ -318,22 +333,20 @@ private_key::sign_compact(const eosio::checksum256 &digest) const {
   }
 }
 
-std::string private_key::sign(std::string_view input) const {
-  return eosio::signature_to_string(eosio::signature{
-      std::in_place_index<1>, sign_compact(sha256::hash(input))});
+std::string private_key::sign(const std::string& input) const {
+  return eosio::signature_to_string(sign_compact(eosio::sha256::hash(input)));
 }
 
-std::string private_key::sign_digest(std::string_view digest) const {
-  check(digest.size() == 64, convert_json_error(eosio::from_json_error::expected_hex_string));
+std::string private_key::sign_digest(const std::string& digest) const {
+  ASSERT(digest.size() == 64, "Digest length is not 64");
 
   eosio::checksum256 checksum;
   if (!eosio::unhex(reinterpret_cast<uint8_t *>(checksum.data()), digest.begin(), digest.end())) {
-    check(false, convert_json_error(eosio::from_json_error::expected_hex_string));
+    ASSERT(false, "Digest is not a hex string");
     __builtin_unreachable();
   };
 
-  return eosio::signature_to_string(eosio::signature{
-      std::in_place_index<1>, sign_compact(checksum)});
+  return eosio::signature_to_string(sign_compact(checksum));
 }
 
 private_key private_key::generate() {

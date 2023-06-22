@@ -8,13 +8,15 @@ project(
   VERSION 1.0
   LANGUAGES CXX)
 
+set(CMAKE_CXX_STANDARD 11)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+
 if (APPLE)
 set(OPENSSL_ROOT_DIR "/usr/local/opt/openssl@1.1")
 endif()
 find_package(OpenSSL 1.1 REQUIRED)
-set(CMAKE_CXX_STANDARD 17)
 
-add_subdirectory(libraries)
 add_subdirectory(src)
 
 option(EOSIO_R1_KEY_ENABLE_TEST "Enable building test" OFF)

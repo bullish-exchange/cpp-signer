@@ -1,7 +1,13 @@
+#pragma once
+
+// Note: this header is the exported interface for the cpp-signer library
+//       only common or standard libraries should be included here, to simplify the dependency and
+//       accelerate the building of the application using this library
+
 #include <openssl/ec.h>
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
-#include <string_view>
+
 #include <string>
 #include <array>
 
@@ -11,8 +17,7 @@ using ecc_public_key = std::array<char, 33>;
 using ecc_private_key = std::array<char, 32>;
 using ecc_signature = std::array<char, 65>;
 
-template <std::size_t Size, typename Word> class fixed_bytes;
-using checksum256 = fixed_bytes<32, std::uint64_t>;
+using checksum256 = std::array<char, 32>;
 
 namespace r1 {
 
@@ -26,18 +31,12 @@ public:
       EC_KEY_free(key);
   }
 
-  public_key(const public_key &) = delete;
-  public_key(public_key &&other) : key(other.key) { other.key = nullptr; }
-  public_key(const ecc_public_key &data);
-  public_key(const ecc_signature &c, const eosio::checksum256 &digest);
-  public_key &operator=(const public_key &) = delete;
-  public_key &operator=(public_key &&other) {
-    key = other.key;
-    other.key = nullptr;
-    return *this;
-  }
+  public_key(const public_key& other);
+  public_key(public_key&& other) : key(other.key) { other.key = nullptr; }
+  public_key(const ecc_public_key& data);
+  public_key(const ecc_signature& c, const eosio::checksum256& digest);
 
-  public_key(std::string_view str);
+  public_key(const std::string& str);
   public_key(EC_KEY *k) : key(k) {}
 
   ecc_public_key serialize() const;
@@ -47,6 +46,9 @@ public:
 private:
   friend class private_key;
   EC_KEY *key;
+
+private:
+  void set(const ecc_public_key& data);
 };
 
 class private_key {
@@ -57,28 +59,25 @@ public:
       EC_KEY_free(key);
   }
 
-  private_key(const private_key &) = delete;
-  private_key(private_key &&other) : key(other.key) { other.key = nullptr; }
-  private_key(const ecc_private_key &data);
-  private_key(std::string_view str);
-  private_key &operator=(const private_key &) = delete;
-  private_key &operator=(private_key &&other) {
-    key = other.key;
-    other.key = nullptr;
-    return *this;
-  }
+  private_key(const private_key& other);
+  private_key(private_key&& other) : key(other.key) { other.key = nullptr; }
+  private_key(const ecc_private_key& data);
+  private_key(const std::string& str);
 
   public_key get_public_key() const;
 
-  ecc_signature sign_compact(const eosio::checksum256 &digest) const;
-  std::string sign(std::string_view input) const;
-  std::string sign_digest(std::string_view digest) const;
+  ecc_signature sign_compact(const eosio::checksum256& digest) const;
+  std::string sign(const std::string& input) const;
+  std::string sign_digest(const std::string& digest) const;
 
   static private_key generate();
   ecc_private_key serialize() const;
 
 private:
   EC_KEY *key;
+
+private:
+  void set(const ecc_private_key& data);
 };
 
 } // namespace r1

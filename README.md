@@ -2,17 +2,39 @@
 
 This repo provides the library and minimal C++ code example to sign any arbitrary message with an EOSIO R1 key and produce an EOSIO signature (k1 keys are not yet supported).
 
-Make sure the submodules are pulled before compiling it.
+## Build the library
+
+Make sure the OpenSSL is install (please check the section below) the submodules are pulled before compiling it.
 
 ```
 git submodule update --init --recursive
 ```
 
-To build the project:
+To build the project, and run the unit tests:
 
 ```
-cmake -DEOSIO_R1_KEY_ENABLE_TEST=ON -DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON -DCMAKE_BUILD_TYPE=Release -S. -Bbuild -DOPENSSL_ROOT_DIR=/usr/local && cmake --build build
+mkdir -p build
+cd build
+# -DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON can enable more examples which require the compiler to support C++17
+cmake -DEOSIO_R1_KEY_ENABLE_TEST=ON -DCMAKE_BUILD_TYPE=Release -DOPENSSL_ROOT_DIR=/usr/local ..
+make -j8
+
+ctest
 ```
+
+### Example Dockerfile
+
+We provide example Dockerfiles for references:
+
+```
+docker build --progress=plain -t cpp-signer-centos7 -f ./centos7.dockerfile .
+```
+
+```
+docker build --progress=plain -t cpp-signer-centos8 -f ./centos8.dockerfile .
+```
+
+The building process will build the library and the unit test, and run the unit test program.
 
 ## How to - integration into your own project
 
@@ -26,15 +48,11 @@ project(
   VERSION 1.0
   LANGUAGES CXX)
 
-
-set(CMAKE_CXX_STANDARD 17)
-
 add_subdirectory(cpp-signer)
 
 add_executable(mysrc mysrc.cpp)
 target_link_libraries(mysrc PRIVATE eosio_r1_key)
 ```
-
 
 In your C++ source code `mysrc.cpp`
 ```
@@ -54,91 +72,13 @@ int main() {
 }
 ```
 
-## For CentOS 7
+## Example programs
 
-Requires C++17 support. We have tested with g++ 10.2.1
-```
-# g++ --version
-g++ (GCC) 10.2.1 20210130 (Red Hat 10.2.1-11)
-```
+Here are some example programs using this library.
 
-Our Centos 7 version information
-```
-# cat /etc/centos-release
-CentOS Linux release 7.9.2009 (Core)
-```
+Note: to build the example program, the `-DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON` option is need to `cmake` to enable them, and these example program building requires the compiler to support C++17.
 
-
-### Install openssl
-The system default OpenSSL package won't work. Please install latest OpenSSL 1.1 from source and install it to `/usr/local`.
-
-As of this writing, OpenSSL version 1.1.1q is current and has no vulnerabilities. Please check the OpenSSL [**vulnerabilities page**](https://www.openssl.org/news/vulnerabilities.html) for the latest, safest 1.1 version and substitute that in below when building.
-
-```
-wget https://ftp.openssl.org/source/openssl-1.1.1q.tar.gz
-
-tar -xzvf openssl-1.1.1q.tar.gz
-
-cd openssl-1.1.1q
-
-./config --prefix=/usr/local --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic
-
-make
-
-make install
-```
-
-
-### Build static library
-static library generation and running tests
-```
-export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
-
-cmake -DEOSIO_R1_KEY_ENABLE_TEST=ON -DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON -DCMAKE_BUILD_TYPE=Release -S. -Bbuild -DOPENSSL_ROOT_DIR=/usr/local && cmake --build build
-
-cd build
-
-ctest
-
-```
-
-### Build dynamic library
-shared library generation and running tests
-```
-export LD_LIBRARY_PATH=/usr/local/lib:/usr/local/lib64
-
-cmake -DEOSIO_R1_KEY_ENABLE_TEST=ON -DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON -DBUILD_SHARED_LIBS=ON -DCMAKE_POSITION_INDEPENDENT_CODE=ON -DCMAKE_BUILD_TYPE=Release -S. -Bbuild -DOPENSSL_ROOT_DIR=/usr/local && cmake --build build
-
-cd build
-
-ctest
-```
-
-
-### Example program that signs the request digest with the C++ library, and places the order
-
-```
-cmake -DEOSIO_R1_KEY_ENABLE_TEST=ON -DEOSIO_R1_KEY_ENABLE_EXAMPLE=ON -DCMAKE_BUILD_TYPE=Release -S. -Bbuild -DOPENSSL_ROOT_DIR=/usr/local && cmake --build build
-
-# follow https://api.exchange.bullish.com/docs/api/rest/#overview--get-your-bullish-account-id to prepare the environment variables
-export BX_API_HOSTNAME=...
-export BX_PUBLIC_KEY=...
-export BX_PRIVATE_KEY=...
-export BX_API_METADATA=...
-export BX_AUTHORIZER=...
-export BX_JWT=...
-
-# call the python tool which calls ./build/example/ecc_signing to sign
-./build/example/create_order.py
-
-# expected output like, confirming the order has been placed
-{"message":"Command acknowledged - CreateOrder","requestId":"511042106937573376","orderId":"511042106937573377","test":false}
-
-```
-
-# C++ Examples
-
-## Call with Withdraw API
+### Call the Withdraw API
 
 This repo provides an example C++ program using the cpp-signer library to sign requests to perform withdraw Custody API calls.
 
@@ -199,7 +139,7 @@ One example output:
 % Received HTTP response body: {"statusReason":"Withdrawal assertion accepted","statusReasonCode":1001,"custodyTransactionId":"DB:FW_0c4c220c545ed1c0f54c918b2141c79f23ea866f64853c805b27b9f1fd61a6c2"}
 ```
 
-## Call with Orders API
+### Call the Order API
 
 To run the build program:
 
@@ -249,9 +189,49 @@ BX-TIMESTAMP: 1671416287000
 % Received HTTP response body: {"message":"Command acknowledged - CreateOrder","requestId":"524772390270926848","orderId":"524772390270926849","test":false}```
 ```
 
+### Sign the request digest with the C++ library from a Python driver program
+
+This example program shows calling a binary program built with the C++ library for signing requests from a program written in Python.
+
+```
+# follow https://api.exchange.bullish.com/docs/api/rest/#overview--get-your-bullish-account-id to prepare the environment variables
+export BX_API_HOSTNAME=...
+export BX_PUBLIC_KEY=...
+export BX_PRIVATE_KEY=...
+export BX_API_METADATA=...
+export BX_AUTHORIZER=...
+export BX_JWT=...
+
+# call the python tool which calls ./build/example/ecc_signing to sign
+./build/example/create_order.py
+
+# expected output like, confirming the order has been placed
+{"message":"Command acknowledged - CreateOrder","requestId":"511042106937573376","orderId":"511042106937573377","test":false}
+```
+
+## Appendix: Install OpenSSL
+
+Please install latest OpenSSL 1.1 from source and install it to `/usr/local`.
+
+As of this writing, OpenSSL version 1.1.1q is current and has no vulnerabilities. Please check the OpenSSL [**vulnerabilities page**](https://www.openssl.org/news/vulnerabilities.html) for the latest, safest 1.1 version and substitute that in below when building.
+
+```
+wget https://ftp.openssl.org/source/openssl-1.1.1q.tar.gz
+
+tar -xzvf openssl-1.1.1q.tar.gz
+
+cd openssl-1.1.1q
+
+./config --prefix=/usr/local --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic
+
+make
+
+make install
+```
+
 ## License
 
-EOSIO is released under the open source [MIT](./LICENSE) license and is offered “AS IS” without warranty of any kind, express or implied. Any security provided by the EOSIO software depends in part on how it is used, configured, and deployed. EOSIO is built upon many third-party libraries such as WABT (Apache License) and WAVM (BSD 3-clause) which are also provided “AS IS” without warranty of any kind. Without limiting the generality of the foregoing, Block.one makes no representation or guarantee that EOSIO or any third-party libraries will perform as intended or will be free of errors, bugs or faulty code. Both may fail in large or small ways that could completely or partially limit functionality or compromise computer systems. If you use or implement EOSIO, you do so at your own risk. In no event will Block.one be liable to any party for any damages whatsoever, even if it had been advised of the possibility of damage.
+EOSIO-Taurus is released under the open source [MIT](./LICENSE) license and is offered "AS IS" without warranty of any kind, express or implied. Any security provided by the EOSIO-Taurus software depends in part on how it is used, configured, and deployed. EOSIO-Taurus is built upon many third-party libraries such as WABT (Apache License) and WAVM (BSD 3-clause) which are also provided "AS IS" without warranty of any kind. You are responsible for reviewing and complying with the license terms included with any third party software that may be provided. Without limiting the generality of the foregoing, Bullish Global and its affiliates make no representation or guarantee that EOSIO-Taurus or any third-party libraries will perform as intended or will be free of errors, bugs or faulty code. Both may fail in large or small ways that could completely or partially limit functionality or compromise computer systems. If you use or implement EOSIO-Taurus, you do so at your own risk. In no event will Bullish Global or its affiliates be liable to any party for any damages whatsoever, even if previously advised of the possibility of damage.
 
 ## Important
 
