@@ -175,10 +175,10 @@ int main() {
     "\"nonce\":\"" + nonce + "\","
     "\"command\":{"
       "\"commandType\":\"V1WithdrawalChallenge\","
-      "\"destinationId\":\"bf6d41a97a1d56e289cdaf10f386a3bd5166d51f9edf50892874bf2e7c0ddaf4\","
-      "\"network\":\"SWIFT\","
-      "\"symbol\":\"USD\","
-      "\"quantity\":\"1\""
+      "\"destinationId\":\"ce3da6f051efacc00c7004bc9239de8a04855dbfc86be33e08182ae5f2f21679\","
+      "\"network\":\"BTC\","
+      "\"symbol\":\"BTC\","
+      "\"quantity\":\"0.00101000\""
     "}"
   "}";
   httplib::Headers headers = { { "Authorization", "Bearer " + token } };

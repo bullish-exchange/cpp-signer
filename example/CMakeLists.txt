@@ -1,6 +1,10 @@
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/api_withdraw_crypto_endpoints.py ${CMAKE_CURRENT_BINARY_DIR}/api_withdraw_crypto_endpoints.py COPYONLY)
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/create_order.py ${CMAKE_CURRENT_BINARY_DIR}/create_order.py COPYONLY)
 
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS ON)
+
 add_executable(create_order create_order.cpp)
 add_executable(ecc_signing ecc_signing.cpp)
 add_executable(withdraw withdraw.cpp)
