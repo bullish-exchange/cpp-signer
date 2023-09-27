@@ -10,7 +10,7 @@ RUN echo "sslverify=false" >> /etc/yum.conf
 RUN yum update -y
 RUN yum install -y make which && \
     yum install -y gcc gcc-c++ && \
-    yum install -y git perl curl bzip2 && \
+    yum install -y git perl perl-IPC-Cmd perl-Test-Simple curl bzip2 && \
     yum install -y zlib-devel
 
 RUN yum remove -y cmake
@@ -30,10 +30,10 @@ RUN curl -fsSLOk "https://boostorg.jfrog.io/artifactory/main/release/1.78.0/sour
     cd .. && \
     rm -rf "boost_1_78_0.tar.bz2" "boost_1_78_0"
 
-RUN curl -fsSLOk https://ftp.openssl.org/source/openssl-1.1.1q.tar.gz && \
-    echo "d7939ce614029cdff0b6c20f0e2e5703158a489a72b2507b8bd51bf8c8fd10ca openssl-1.1.1q.tar.gz" | sha256sum -c - && \
-    tar -xzvf openssl-1.1.1q.tar.gz && \
-    cd openssl-1.1.1q && \
+RUN curl -fsSLOk https://ftp.openssl.org/source/openssl-3.0.8.tar.gz && \
+    echo "6c13d2bf38fdf31eac3ce2a347073673f5d63263398f1f69d0df4a41253e4b3e openssl-3.0.8.tar.gz" | sha256sum -c - && \
+    tar -xzvf openssl-3.0.8.tar.gz && \
+    cd openssl-3.0.8 && \
     ./config --prefix=/usr/local --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic && \
     make -j$(nproc) && \
     make install && \
