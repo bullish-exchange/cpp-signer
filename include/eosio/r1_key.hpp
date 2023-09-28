@@ -8,6 +8,7 @@
 #include <openssl/ecdsa.h>
 #include <openssl/evp.h>
 
+#include <iostream>
 #include <string>
 #include <array>
 
@@ -27,8 +28,9 @@ class public_key {
 public:
   public_key() : key(new_r1_key()) {}
   ~public_key() {
-    if (key)
+    if (key) {
       EC_KEY_free(key);
+    }
   }
 
   public_key(const public_key& other);
@@ -43,9 +45,11 @@ public:
 
   EC_KEY *get() const { return key; }
 
+  bool verify(const std::string& message, const std::string& sigature) const;
+
 private:
   friend class private_key;
-  EC_KEY *key;
+  EC_KEY* key = nullptr;
 
 private:
   void set(const ecc_public_key& data);
@@ -74,11 +78,22 @@ public:
   ecc_private_key serialize() const;
 
 private:
-  EC_KEY *key;
+  EC_KEY* key = nullptr;
 
 private:
   void set(const ecc_private_key& data);
 };
+
+/*
+ * This function accepts standard ECDSA R1 keys and sigantures and verifies it.
+ *
+ * Curve - ECDSA R1 (prime256v1 or secp256r1 or P-256 in different docs)
+ * Public key format - X.509 SubjectPublicKeyInfo format, PEM encoded
+ * Hashing algorithm used during signing - sha256
+ * Encoding of the signature - DER
+*/
+bool verify_ecdsa_sig(const std::string& message, const std::string& signature,
+                      const std::string& public_key);
 
 } // namespace r1
 } // namespace eosio

@@ -1,17 +1,58 @@
-#include <eosio/r1_key.hpp>
-#include <eosio/crypto.hpp>
 #include <eosio/check.hpp>
+#include <eosio/crypto.hpp>
+#include <eosio/r1_key.hpp>
 
+#include "base64.h"
+
+#include <openssl/ec.h>
+#include <openssl/ecdsa.h>
+#include <openssl/err.h>
+#include <openssl/evp.h>
+#include <openssl/pem.h>
 #include <openssl/sha.h>
 
+#include <exception>
+#include <iostream>
 #include <memory>
+#include <stdexcept>
+#include <string>
 
-std::string format_error_message(const std::string& msg, const char *file,
-                                 int line) {
-  return std::string(msg) + " " + file + ":" + std::to_string(line);
+#define ASSERT(cond, msg)                                                     \
+  if (!(cond)) {                                                              \
+    throw std::runtime_error(format_error_message(msg, __FILE__, __LINE__));  \
+  }
+
+static std::string format_error_message(const std::string& msg,
+                                        const std::string &file,
+                                        int line) {
+  return msg + " " + file + ":" + std::to_string(line);
 }
 
-#define ASSERT(cond, msg)  if (!(cond)) { throw std::runtime_error(format_error_message(msg, __FILE__, __LINE__)); }
+static void elog(const std::string &str) {
+#ifndef NDEBUG
+  std::cerr << str << std::endl;
+#endif
+}
+
+static void elog_openssl_err(const std::string& msg) {
+#ifndef NDEBUG
+   if (const char* openssl_err = ERR_error_string(ERR_get_error(), NULL)) {
+      elog(msg + std::string(": ") + openssl_err);
+   } else {
+      elog(msg);
+   }
+#endif
+}
+
+static EC_KEY* get_pubkey_from_pem(const char* pem, size_t pem_len) {
+   EC_KEY* ec_key = NULL;
+   BIO* bio = BIO_new_mem_buf(pem, pem_len);
+   if (bio) {
+      ec_key = PEM_read_bio_EC_PUBKEY(bio, NULL, NULL, NULL);
+   }
+   BIO_free(bio);
+   return ec_key;
+}
 
 namespace eosio {
 namespace r1 {
@@ -28,8 +69,12 @@ std::unique_ptr<T, Deleter> make_unique_ptr(T *ptr, Deleter deleter) {
   return std::unique_ptr<T, Deleter>(ptr, deleter);
 }
 
-auto make_ssl_bignum() -> decltype(make_unique_ptr(BN_new(), BN_free)) { return make_unique_ptr(BN_new(), BN_free); }
-auto dup_ssl_bignum(const BIGNUM *from) -> decltype(make_unique_ptr(BN_dup(from), BN_free)) {
+auto make_ssl_bignum() -> decltype(make_unique_ptr(BN_new(), BN_free)) {
+  return make_unique_ptr(BN_new(), BN_free);
+}
+
+auto dup_ssl_bignum(const BIGNUM *from)
+  -> decltype(make_unique_ptr(BN_dup(from), BN_free)) {
   return make_unique_ptr(BN_dup(from), BN_free);
 }
 
@@ -124,10 +169,7 @@ int ECDSA_SIG_recover_key_GFp(EC_KEY *eckey, ECDSA_SIG *ecsig,
   if (8 * msglen > n)
     BN_rshift(e, e, 8 - (n & 7));
   zero = BN_CTX_get(ctx);
-  if (!BN_zero(zero)) {
-    ret = -1;
-    goto err;
-  }
+  BN_zero(zero);
   if (!BN_mod_sub(e, zero, e, order, ctx)) {
     ret = -1;
     goto err;
@@ -341,7 +383,9 @@ std::string private_key::sign_digest(const std::string& digest) const {
   ASSERT(digest.size() == 64, "Digest length is not 64");
 
   eosio::checksum256 checksum;
-  if (!eosio::unhex(reinterpret_cast<uint8_t *>(checksum.data()), digest.begin(), digest.end())) {
+  if (!eosio::unhex(reinterpret_cast<uint8_t *>(checksum.data()),
+                                                digest.begin(),
+                                                digest.end())) {
     ASSERT(false, "Digest is not a hex string");
     __builtin_unreachable();
   };
@@ -360,6 +404,75 @@ ecc_private_key private_key::serialize() const {
   auto bn = EC_KEY_get0_private_key(key);
   BN_bn2bin(bn, (unsigned char *)result.data()) ;
   return result;
+}
+
+// Note that this refers to the standard (common) ECDSA signature
+// encoding/decoding form, and has nothing to do with the one with that usual
+// eosio code uses.
+bool verify_ecdsa_sig(const std::string& message, const std::string& signature,
+                      const std::string& public_key) {
+  const std::string prefix =
+    "verify_ecdsa_sig(message, signature, public_key) ";
+  if (message.empty()) {
+    elog(prefix + "message can't be empty");
+    return false;
+  }
+  if (signature.empty()) {
+    elog(prefix + "signature can't be empty");
+    return false;
+  }
+  EC_KEY *ec_key = NULL;
+  ECDSA_SIG *sig = NULL;
+  try {
+    if (!(ec_key =
+        get_pubkey_from_pem(public_key.c_str(), public_key.size()))) {
+      elog_openssl_err(prefix + "EC_KEY inside public_key is a null pointer");
+      return false;
+    }
+    const EC_GROUP *ec_group = EC_KEY_get0_group(ec_key);
+    if (!ec_group) {
+      elog_openssl_err(prefix + "Error getting EC_GROUP");
+      EC_KEY_free(ec_key);
+      return false;
+    }
+    if (EC_GROUP_get_curve_name(ec_group) != NID_X9_62_prime256v1) {
+      elog_openssl_err(prefix + "Error validating secp256r1 curve");
+      EC_KEY_free(ec_key);
+      return false;
+    }
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    auto *res = SHA256(reinterpret_cast<const unsigned char *>(message.data()),
+                       message.size(), digest);
+    if (!res) {
+      elog_openssl_err(prefix + "Error getting SHA-256 hash");
+      EC_KEY_free(ec_key);
+      return false;
+    }
+    const std::string sig_decoded = base64_decode(signature);
+    auto *sig_data =
+        reinterpret_cast<const unsigned char *>(sig_decoded.data());
+    sig = d2i_ECDSA_SIG(NULL, &sig_data, sig_decoded.size());
+    if (!sig) {
+      elog_openssl_err(prefix + "Error decoding signature");
+      EC_KEY_free(ec_key);
+      return false;
+    }
+    bool result = (ECDSA_do_verify(digest, sizeof(digest), sig, ec_key) == 1);
+    if (!result) {
+      elog_openssl_err(prefix + "Error verifying signature");
+    }
+
+    EC_KEY_free(ec_key);
+    ECDSA_SIG_free(sig);
+    return result;
+  } catch (const std::exception &e) {
+    elog(prefix + "exception: " + e.what());
+  } catch (...) {
+    elog(prefix + "unknown exception");
+  }
+  EC_KEY_free(ec_key);
+  ECDSA_SIG_free(sig);
+  return false;
 }
 
 } // namespace r1

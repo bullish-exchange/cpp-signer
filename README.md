@@ -211,16 +211,16 @@ export BX_JWT=...
 
 ## Appendix: Install OpenSSL
 
-Please install latest OpenSSL 1.1 from source and install it to `/usr/local`.
+Please install latest OpenSSL 3.x from source and install it to `/usr/local`.
 
-As of this writing, OpenSSL version 1.1.1q is current and has no vulnerabilities. Please check the OpenSSL [**vulnerabilities page**](https://www.openssl.org/news/vulnerabilities.html) for the latest, safest 1.1 version and substitute that in below when building.
+As of this writing, OpenSSL version 3.0.8 is the current LTS version and has no vulnerabilities. Please check the OpenSSL [**vulnerabilities page**](https://www.openssl.org/news/vulnerabilities.html) for the latest, safest version and substitute that in below when building.
 
 ```
-wget https://ftp.openssl.org/source/openssl-1.1.1q.tar.gz
+wget https://ftp.openssl.org/source/openssl-3.0.8.tar.gz
 
-tar -xzvf openssl-1.1.1q.tar.gz
+tar -xzvf openssl-3.0.8.tar.gz
 
-cd openssl-1.1.1q
+cd openssl-3.0.8
 
 ./config --prefix=/usr/local --openssldir=/etc/ssl --libdir=lib no-shared zlib-dynamic
 
