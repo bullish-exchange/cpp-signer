@@ -3,4 +3,7 @@
 	url = https://github.com/yhirose/cpp-httplib
 [submodule "example/include/rapidjson"]
 	path = example/include/rapidjson
-	url = https://github.com/Tencent/rapidjson
+  url = https://github.com/Tencent/rapidjson
+[submodule "library/base64"]
+	path = library/base64
+	url = https://github.com/ReneNyffenegger/cpp-base64
